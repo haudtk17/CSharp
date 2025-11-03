@@ -1,0 +1,464 @@
+------------------------------------------------------------------------
+top-level statement
+(Only C# 9.0 up)
+
+------------------------------------
+- top-level is implicitly wrapped by Main method which is done by CLR
+
+ex:
+//file a.cs
+Console.WriteLine("something_1");
+
+//file a.cs is the same with b.cs
+//file b.cs
+using System;
+internal class Program{
+	public static void Main(string[] args){
+		Console.WriteLine("something_1");
+	}
+}
+------------------------------------
+- only 1 file in project can have top-level statement
+- top-level is place right after "using" directives and right before any namespace/class/method
+ex:
+
+//file a.cs
+using System;
+
+//---top-level begin here---
+Console.WriteLine("Something in top-level statement");
+int x = 9;
+if(x>=0){
+	if(x == 0){
+		//....
+	}
+}
+return 0;
+//---top-level end here---
+
+//---everything here is ignored(i.e: from now, everything is not executed. But if these code is refered in somewhere, it still ok)
+namespace MyNamespace{
+	class MyClass{
+		//........
+	}
+}
+------------------------------------
+- a file with top-level statement can also contain namespaces and type definitions, but they must come after the top-level statement.
+
+ex:
+---top-level statement begin---
+MyNamespace1.MyClass.method1();	//OK
+MyClass.method2();	//OK
+---top-level statement end---
+
+namespace MyNamespace1{
+	class MyClass{
+		public static void method1(){
+			Console.WriteLine("Inside MyNamespace1.MyClass.method1");
+		}
+	}
+}
+
+class MyClass{
+	public static void method2(){
+		Console.WriteLine("Inside MyClass.method2");
+	}
+}
+------------------------------------
+- "args" is accessed with top-level statement because top-level statements is implicitly is wrapped by "Main" method
+
+ex:
+//file a.cs
+//=============
+Console.WriteLine("Top-level statement");
+Console
+//=============
+
+------------------------------------
+------------------------------------------------------------------------
+null-coalescing operator: "??" and "??="
+
+- null-coalescing is right-associative: evaluated from right to left side.(i.e: a couple of brace is enclosed from right to left)
+ex:
+	a ?? b ?? c		mean: if b==null ==> (a ?? c) ==> if a==null ==> final result is c
+	equivalant: a ?? (b ?? c)
+	------------------
+	the same maner is true for operator "??="
+	ex:
+		e ??= f ??= g	mean: if f==null ==> f=g ==> if e==null ==> e=(f ??= g)
+		equivalant: e ??= (f ??= g)
+		------------------
+		string? e = null;
+		string? f = null;
+		string? g = "hello";
+
+		string? result = e ??= f ??= g;	//result = e = "hello"
+
+		Console.WriteLine($"final: result = '{result}'");
+		Console.WriteLine($"boolean evalutation: [result == e == g == \"hello\"] is " +  ((result == e) && (e == g) && (g=="hello")));
+
+		output:
+			final: result = 'hello'
+			boolean evalutation: [result == e == g == "hello"] is True
+		------------------
+- real example:
+	ex:
+		int? a = null;
+		int b = a ?? -1;	//b will be equal -1
+- ?? and ??= can't be overloaded		
+------------------------------------------------------------------------
+interpolated string
+
+syntax: ${<interpolatedExpression>[,<width>][:formatString]}
+	+ "width" and "formatString" is optional
+	+ "interpolatedExpression" is an expression. If this expression is null ==> empty string (i.e: String.Empty)
+		ex:
+			int? a = null;
+			int b = 3;
+			string result1 = $"*{a}*";	//result1 = "**"
+			string result2 = $"*{b}*";	//result2 = "*3*";
+	+ "width" is the minimum number of character.
+		+ If result of "interpolatedExpression" has greater of number of character ==> the number of character of "interpolatedExpression" is set for final result.
+			ex:
+				double d = 0.12345;
+				string result = $"{d,3}"; //result = "0.12345" NOT "0.12"
+		+ If "width" is positive ==> right-align
+			ex:
+				int a = 32;
+				string result = $"{a,5}";	//result = "   32"
+		+ If "width" is negative ==> left-align
+			ex:
+				int a = 32;
+				string result = $"{a-5}";	//result = "32   "
+	+ "formatString" is the number of float number
+		ex:
+			double dValue = 0.1234;
+			string result = $"{dValue,2:F3}";		//result = "0.123"
+------------------------------------------------------------------------
+----------------------------
+verbatim string
+
+- to get verbatim ==> use '@' before double quotes
+ex:
+	string pathName = "C:\\Users\\Desktop\\";
+	string verbatimPathName = @"C:\Users\Desktop\";
+
+	string academy = "\x0041cademy";	// "Academy"
+	string verbatimAcademy = @"\x0041cademy";	// "\x0041cademy"
+----------------------------
+use @ as identifier
+
+- place @ before a keyword to treate it as a normal identifier
+ex:
+	string @for = "Ok";
+	Console.Write(@for);		//OK
+----------------------------
+use _ to separate the view of number
+ex:	int x = 1_000;	//x = 1000
+----------------------------
+in computer, floating number is stored not seem like it be displayed ==> never compare 2 double type
+ex:
+	double x1 = 0.1;
+	double x2 = 0.2;
+	bool result = (x1 + x2) == 0.3;	//false because 0.1+0.2 = 0.3000000004
+==> solution: for precision, use "decimal" type.
+	ex:
+		decimal x1 = 0.1m;
+		decimal x2 = 0.2m;
+		bool result = (x1+x2) == 0.3m;	//true
+----------------------------
+from C#9, can use just "new()" for create new object
+ex:	XmlDocument xml1 = new();	//short version of: XmlDocument xml1 = new XmlDocument();
+----------------------------
+int x = 921;
+string xInString = x.ToString();	//convert an int to string
+----------------------------
+object ob = 9;
+if(ob is int myVar){	//if "ob" is type of "int" ==> assign myVar = ob
+	//do something
+}
+----------------------------
+****NOTE: IEEE 754
+NaN: Not a Number
+NaN is unspecified value ==> two NaN is not equal
+double.NaN == double.NaN;	//false
+double.NaN != double.NaN;	//true
+0.0/0 == 0.0/0;	//false
+
+***NaN is only used for floating number: float and double
+----------------------------
+switch-case:
+
+#1: like C++ switch-case
+
+#2: relational partern (from C#9.0)
+switch(expression){
+	case partern_1:
+		break;
+	case partern_2:
+		break;
+	case partern_n:
+		break;
+	default:
+		break;
+	....
+}
+ex:
+	int x = 8;
+	switch(x){
+		case > 8:
+			//do something
+			break;
+		case < 8:
+			//do something
+			break;
+		case 8:
+			//do something
+			break;
+	}
+
+#3: relational partern (from C#9.0)
+switch(expression){
+	case <partern_1> and <partern_2>:
+		break;
+	case <partern_1> or <partern_2>:
+		break;
+	case not <partern>:
+		break;
+}
+ex:
+    int x = 1;
+    switch (x)
+    {
+        case > 9 and < 100:
+            Console.WriteLine("case > 9 and < 100");
+            break;
+        case < 9 or > 100:
+            Console.WriteLine("case < 9 or > 100");
+            break;
+        case 9:
+            Console.WriteLine("case 9");
+            break;
+        case not 9:
+            Console.WriteLine("case not 9");
+            break;
+    }
+
+#4: case guard - when clause
+switch(expression){
+	case partern when condition:
+		//do something
+		break;
+}
+
+ex:
+	string cmd = "start";
+	switch(cmd){
+		case string s when s.StartsWith("st"):
+			Console.WriteLine("start with 'st' ");
+			Console.WriteLine("cmd[3] is '" + cmd[3] + "'");
+			break;
+		case string s when s.Length > 5:
+			Console.WriteLine("length > 5");
+			break;
+		default:
+			Console.WriteLine("Default block");
+			break;
+	}
+
+#5: return expression
+var result = expression switch{
+	patern_1 => value_1;
+	patern_2 => value_2;
+	...
+	_ => default_value;
+}
+
+ex:
+	int x = 9;
+	string result = x switch{
+		0 => "zero",
+		>0 => "positive",
+		_ => "negative"
+	};
+
+- used as a short version of method
+ex:
+        static void Main()
+        {
+            //GetStatus(int) is a local function inside a function
+            string GetStatus(int temp) => temp switch
+            {
+                < 0 => "frezzed",
+                >= 0 and <= 10 when temp==9 => "cold",
+                > 10 and <= 20 => "cool",
+                _ => "hot"
+            };
+
+            Console.WriteLine($"Current weather is {GetStatus(10)}");
+        }
+
+        //output: "hot"
+
+#6: use with tuple
+ex1:
+        static void Main()
+        {
+            string ValidateItem((int, string) infor) => infor switch
+            {
+                ( < 30, "red") => "too large and not beauty",
+                (30, "blue") => "look nice!",
+                _ => "disgusting"
+            };
+
+            Console.WriteLine(ValidateItem((30, "blue")));
+        }
+
+ex2: switch-case with property patern
+var person = new { age = 23, name = "John" };
+string group = person switch
+{
+    { age: >=18} when person.name.StartsWith("J") => "f",
+    { age: <18 } => "child",
+    { age: >=18} => "adult",
+    
+};
+----------------------------
+foreach (<data_type> <local_variable_name> in <enumeratation_object>){
+	//do something
+}
+- item of foreach cannot be modified. This mean the item is read-only
+ex:
+	int[] numbers = {3, 4, 5};
+	foreach(int n in number){
+		n = 0;	//Error
+	}
+----------------------------
+parsing a string into a data type
+
+- some data type have a "Parse()" method for parsing string to its type. But this way of parsing is throw exception if fail
+ex:
+	string input = "345";
+	int x = int.Parse(input);	//ok: x = 345
+
+	//but
+	string input  = "k345";
+	int x = int.Parse(input);	//run-time exception
+- most of primary types have TryParse() method for parsing the string to its type. This method returns a bool result and take "out" argument for save result
+ex:
+	string input = "123";
+	int result;
+	bool check = int.TryParse(input, out result);	//true and result = 123
+	
+	string input = "a123";
+	int result;
+	bool check = int.TryParse(input, out result);	//false and result = default value = 0
+----------------------------
+checked and unchecked keyword
+
+- used in arithmatic operation and type conversion for integral type to define the checking for OverflowException of the number
+- checked:	enable compiler checking for overflow/type conversion error at compile time
+- unchecked: vice verse with checked
+syntax:
+	checked{ //statements here}
+	unchecked{ //statements here}
+ex:
+	checked{	//raise an error at compile time
+		uint x = uint.MaxValue + 1;
+	}
+
+	unchecked{	//not raise an error at compile time ==> error prone
+		uint x = uint.MaxValue + 1;	//raise an error at compile time
+	}
+----------------------------
+pass argument to function call
+
+- explicitly specify the argument for each parameter in a function. By this way, the order of parameters is ignored
+ex:
+	static void DoWork(int number, string message){
+		Console.WriteLine("My number is "+number + " and message is " + message);
+	}
+	
+	static void Main(){
+		DoWork(message: "The black box", number: 99);	//OK
+	}
+- the usage of this way must be synchronized. i.e fully use "explicit argument specification"  for all parameters
+ex:
+	static void Main(){
+		DoWork(message: "The black box", number: 99);	//OK
+	}
+
+	static void Main(){
+		DoWork(message: "The black box", 99);	//Error
+	}
+	
+----------------------------
+var keyword
+ - "var" is only used with local variable. Compiler infer the type of that variable at compile time
+
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+#Chapter 4
+
+----------------------------
+Add reference project
+- by GUI: right click to target project ==> Add ==> Project reference	//vs2022 automatically generate XML content in "project_name.csproj" file
+- by XML: in target project .csproj file, add the following tags
+	<ItemGroup>
+		<ProjectReference Include="\path_to_project\project_name.csproj" />
+	</ItemGroup>
+----------------------------
+caught exception in stack call
+
+- in catch block, after do stuff with exception that have just caught, should use "throw;" and shouldn't use "throw exception_var;"
+because, after handling exception, we use "throw;" to re-throw exception to trace where exception come from
+while use "throw ex;", only throw exception come from at this line of code (i.e: "throw ex;"), all exception stack above will not be shown
+ex:
+	void Alpha(){
+		try{
+			Beta();
+		}catch(Exception ex){
+			LoggingExceptionToFile(ex);	//caught and logging exception
+
+			//after do stuff with the exception, re-throw exception to stop the program
+			throw;	//this line will throw exception from line #10
+			
+			//bad ideal of throwing exception
+			//throw ex;	//if this line is uncommented ==> exception will throw from this line, not from line #10
+		}
+	}
+	void Beta(){
+		throw new Exception();	//line #10, this line will throw an exception - where the error begin
+	}
+	void Main(){
+		Alpha();
+	}
+----------------------------
+------------------------------------------------------------------------
+
+
+------------------------------------------------------------------------
+#Chapter5
+
+----------------------------
+namespace
+
+- if use namespace block  ==> can have multiple namespace in one file .cs ==> all code in this .cs file will belong to this namespace
+But if use "namespace name_space;" ==> only 1 namespace in a .cs is allowed ==> explicit namespace
+ex:
+	//file a.cs	- old format
+	namespace Namespace1{
+		//code
+	}
+	namespace Namespace2{
+		//code
+	}
+
+	//file b.cs	- new format
+	namespace MyNamespace;
+	//all code in this file will belong to MyNamespace
+- Both 2 of ways also still valid. But should use old format with block
+----------------------------
+------------------------------------------------------------------------
