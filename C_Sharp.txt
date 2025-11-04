@@ -440,7 +440,7 @@ ex:
 
 
 ------------------------------------------------------------------------
-#Chapter5
+#Chapter5	- OOP
 
 ----------------------------
 namespace
@@ -460,5 +460,244 @@ ex:
 	namespace MyNamespace;
 	//all code in this file will belong to MyNamespace
 - Both 2 of ways also still valid. But should use old format with block
+----------------------------
+- can not place any statement directly in class scope. Only allowed inside method or property
+ex:
+	public class X{
+		public int x;	//just declare. OK
+		x = 9;	//execute a statement: ERROR
+		public void X(){
+			set{
+				x = value;	//OK: do action with field x inside a property
+			}	
+		}
+		public int y = 9;	//initialization: OK
+	}
+
+- if class have static field and programmer do not explicitly define a "static constructor" ==> compiler automatically
+generate one static constructor and then do initialization for that static field.
+**NOTE: one class can only have 1 static constructor. This constructor is only called one time when class first be called
+- static constructor must not include any access modifier. it implicitly is private, but can't be explicitly defined as private
+ex:
+	public class X{
+		static X(){}	//OK
+		private static X(){}	//ERROR
+		protected static X(){}	//ERROR
+		public static X(){}	//ERROR
+	}
+-------------------------
+instance constructor
+
+- instance constructor can be any of private, protected or public
+=========
+(*) private
+- constructor cannot be called outside of class like: new X()
+
+- Purpose:
++, Single Instance: only 1 instance and can access via property
+	ex:
+	public class SingletonLogger{
+		//only one private field to hold instance of class
+		private static SingletonLogger _instance = new SingletonLogger();
+
+		//private constructor prevents creating instance outside of class
+		private SingletonLogger(){}
+		
+		//another instance constructor with difference signature is allowed. But do not do this
+		public SingletonLogger(int x){}
+
+		//public static property for access unique instance of class
+		public static SingletonLogger Instance => _instance;
+	}
+	***singleton patern is used in reality situation like:
+		+ use only one logger in all project
+		+ use only 	connection to database in whole project
+		+ use only one configuration manager
+		
++, Factory method:	control the creatation of instance of class. via a static method
+	ex:
+	public class Person{
+		private Person(string name, DateTim dob){/*...more code here*/}	//"new Person()" outside of class is not allowed
+		public static Person CreateAdult(string name, DateTime dob){
+			if(DateTime.Now.Year - dob.Year <18){
+				throw new ArgumentException("Must be adult");
+			}
+			return new Person(name, dob);
+		}
+	}
++, Prevent inheritance from another class. "private instance constructor" same with "sealed class"
+	ex:
+	public class X{
+		private X(){};
+	}
+	
+	//same with above
+	sealed public class X{
+	}
+	
+	public class Y : X{}	//ERROR
+	
+=========
+(*) protected
+
+- only allow create instance from derived class
+ex:
+	public class Base{
+		protected Base(string name){}	//only inside this class or subclass can create instance
+
+		public Base createBase(string name){	//internal factory method. outside class can call this method to create Base instance
+			if(name.Length < 5){
+				throw new ArgumentException("name must have at least 5 char of length");
+			}
+			return new Base(name);
+		}
+	}
+	public class Derived : Base{
+		public Derived : base(name){}	//subclass can create instance
+	}
+=========
+(*) public
+- any code outside can call instance constructor
+=========
+
+-------------------------
+- we can explicitly define static constructor for class.
+- static field is always be assigned first(if have initialized value ==> use this value. Unless this static field is initialized by default value depend to its type)
+In static constructor, can overwrite that static field.
+ex:
+namespace K{ 
+	public class X
+	{
+		//field
+		public static int x;       //no initialized value ==> use default value: x = 0
+		public static int y = 9;   //use initialized value ==> y = 9
+
+		//static constructor
+		static X(){
+				Console.WriteLine($"x before override: x = {x}");	//x = 0
+				Console.WriteLine($"y before override: y = {y}");	//y = 9
+				x = 88;
+				y = 33;
+				Console.WriteLine($"x after override: x = {x}");	//x = 88
+				Console.WriteLine($"y after override: y = {y}");	//y = 33
+		}
+		public X(){
+			//assume have no assignment to x an y here
+
+			Console.WriteLine($"x inside constructor: x = {x}");    //x=88
+			Console.WriteLine($"y inside constructor: y = {y}");    //y=33
+		}
+	}
+	
+	public class Program
+	{
+		public static void Main()
+		{
+            X x1 = new();
+            Console.WriteLine($"x inside another call: x = {X.x}");    //X.x=88
+            Console.WriteLine($"y inside another call: y = {X.y}");    //X.y=33
+        }
+    }
+}	
+----------------------------
+access modifier
+
+- in a namespace, only "public" or "internal" is allowed. Because:
+	+, public:	allow access both inside and outside of an assembly
+	+, internal: allow access only inside an assembly
+***namespace is top-level of access, have no thing is parent of namespace ==> cannot use private or protected
+- in a namespace, only have: class, struct, enum, interface, delegate and record are allowed.
+The field/property, method are belong to class/struct.
+Also: event, variable, statement are not allowed in a namespace scope
+ex:
+    -----------------------
+     ////assembly A - i.e: project A
+    //file a.cs
+ 
+
+    namespace A;
+
+    public class X
+    {
+        internal protected static int number_1;
+        private protected int number_2;
+    }
+    internal class Y
+    {
+        internal protected int x; //"internal" is disabled because of the declaration of class Y is internal.
+                                  //"internal protected int x;" become "protected int x;"
+    }
+    public class Z : X
+    {
+        protected int y;    //y is accesible in any class inherite from class Z from both in assembly A or other assembly
+        void fx()
+        {
+            number_2 = 0;   //OK
+        }
+    }
+    public class Z1 : Z
+    {
+        void f()
+        {
+            y = 9;  //OK
+            number_2 = 0;   //ERROR
+        }
+    }
+    public class Z2
+    {
+        int w;  //equal: "private int w;"
+    }
+    class Z3
+    {   //internal class Z3
+        int u;  //private u;
+        void fz()
+        {
+            X.number_1 = 9;   //OK
+        }
+    }
+	===========
+	//file b.cs
+	using A;
+
+	public class ZB : Z{	//OK
+		void g(){
+			y = 8;	//OK
+		}
+		void gg(){
+			Z3 z3 = new();	//OK
+			z3.u = 9;	//ERROR
+		}
+	}
+	public class ZC : X{
+		void xx(){
+			number_1 = 0;	//OK
+			number_2 = 0;	//ERROR
+		}
+	}
+	-----------------------
+	-----------------------
+	////assembly B
+	//file c.cs
+	using A;
+
+	//public class K : Y{	//ERROR because Y is internal of assembly A
+	public class K : Z{	//OK
+		void yyyy(){
+			Z3 kz3 = new();	//ERROR
+
+			Z2 kz2 = new();	//OK
+			kz2.w = 0;		//ERROR
+		}
+		void k(){
+			y = 0;	//OK
+		}
+	}
+	-----------------------	
+****sumary
+- internal class: only inside assembly
+- public class: outside and inside assembly
+- internal protected (internal OR protected) only for members(field, property, method) of class: inside assembly or in other assembly but inherited
+- private protected (internal AND protected) only for members(field, property, method) of class: only inside assembly and inherited
+- class only allowed by either "internal" or "public", not allowed neither for private nor protected
 ----------------------------
 ------------------------------------------------------------------------
