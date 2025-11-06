@@ -1,0 +1,89 @@
+- in C#, principle CLR(Common Language Runtime) determines: static constructor is called right before any touch to class. This is a fix rule in all .NET runtime
+
+public class A
+{
+    static A() { Console.WriteLine("Static ctor A"); }
+    public static int value = 42;
+}
+
+public class B
+{
+    static B() { Console.WriteLine("Static ctor B"); }
+    public static void Print()
+    {
+        Console.WriteLine($"A.value = {A.value}");
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        B.Print();
+    }
+}
+
+==> output:
+	Static ctor B
+	Static ctor A
+	A.value = 42
+
+==> explain: because B.Print() is a calling to static method of class B ==> static constructor of class B is called first ==> then static method Print() is called ==> A is touch for the first time(mean have no any touch before this moment) so ==> static constructor of A is called ==> after static constructor of A is called ==> the Console.WriteLine statement inside Print() is continue the remain job
+
+***NOTE:
+- for clearly order of static constructor to be load ==> use side effect by explicitly touch the class by order
+ex:
+public class A
+{
+    static A() { Console.WriteLine("Static ctor A"); }
+    public static int value = 42;
+}
+
+public class B
+{
+    static B() { Console.WriteLine("Static ctor B"); }
+    public static void Print()
+    {
+        _ = A.value;	//touch first to call static constructor of class A
+        Console.WriteLine($"A.value = {A.value}");
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        B.Print();
+    }
+}
+
+==> output:
+	Static ctor A
+	Static ctor B
+	A.value = 42
+-------------------------------
+- static constructor is always be called before static member call(not mention to non-static/static fields initializing)
+ex:
+public class X
+{
+    static X()
+    {
+        Console.WriteLine("static constructor called");
+    }
+    public static void f()
+    {
+        Console.WriteLine("static method called");
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        X.f();
+    }
+}
+
+==> output:
+	static constructor called
+	static method called
