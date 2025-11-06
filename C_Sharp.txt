@@ -1,4 +1,341 @@
 ------------------------------------------------------------------------
+****NOTE
+
+------------------------------------
+- field should always be initialized with value. Should not leave it just by declaration.
+	+ value type field: Although field of value type(like: int, double, char,...) is initialized by default value by compiler but should give it initial value for clean and explicit.
+	+ reference type field: It give error prone when referencing it later after just declaring without giving it initial value. Except it is accepted to be null and be manipulated at specific time in the future
+ex:
+	public class Dog{
+		public int age;	//OK: default value is given
+		public string name;	//compile OK but ERROR PRONE
+		public void checkInfo(){
+			if(age >= 0){ //pass}
+			if(name.Length > 5){	//Oops!!! null not have Length property ==> throw NullReferenceException at runtime
+			}
+		}
+	}
+------------------------------------
+- C# have 2 kind of constructor:
+	+ instance constructor
+	+ static constructor
+- static constructor always be called - called only one time - before any thing else(but after field initializing) when class is used.
+If programmer do not define "static constructor", compiler will auto generate one, and as imagine all field will be assigned with value inside this static constructor.
+If programmer explicitly define "static constructor", compiler will NOT generate one.
+
+Follow that, instance constructor is called
+ex:
+	public class X{
+		public int x = 9;	//this will be called #1
+		public double y;	//this will also be called #1
+		
+	}
+
+***one class can ONLY have 1 static constructor
+***static constructor can not be called by code, only compiler can call
+***static constructor is called by compiler to start any static member inside static constructor
+***both static and non-static field is initialized before any non-constructor or static constructor is called:
+	+, non-static field is initialized when new object
+	+, static field is initialized when class is load at the first time
+	flow of class: "class is first load" or "create new" ==> fields ==> constructor
+explain more clearer:
+If any static member is called first ==> static constructor is called first
+If no static member is called first ==> static constructor will be called one time when create new instance of class
+------------------------------------
+- static constructor is only one in class. because compiler only know 1 static constructor to call
+- static constructor is not have access modifier. because it is for compiler, not any code else call
+- static constructor exists because it is intended to be used to initialize/load the initial data for class. This data usually is used as single load like: only one logger for the whole of program, only one configuration file,..etc
+- inside static constructor may need use complex logic for initialize/load data for class
+ex:
+	public class Config{
+		private static int x;
+		private static Loger loger;
+		public static Dictionary<string, string> Settings;		
+
+		statics Config(){
+			Settings = LoadConfigFromJson("config.json");
+		}
+
+		private static LoadConfigFromJson(string path){
+			//handling load file
+		}
+	}
+------------------------------------
+static constructor
+
+- must be parameterless - i.e: must not have parameter
+- must not have access modifier
+ex:
+	class X{
+		static X(int x){}	//ERROR
+		static X(){}	//OK
+		private static X(){}	//ERROR
+		protected static X(){}	//ERROR
+		public static X(){}	//ERROR
+	}
+------------------------------------
+***NOTE
+- in C#, principle CLR(Common Language Runtime) determines: static constructor is called right before any touch to class. This is a fix rule in all .NET runtime
+
+public class A
+{
+    static A() { Console.WriteLine("Static ctor A"); }
+    public static int value = 42;
+}
+
+public class B
+{
+    static B() { Console.WriteLine("Static ctor B"); }
+    public static void Print()
+    {
+        Console.WriteLine($"A.value = {A.value}");
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        B.Print();
+    }
+}
+
+==> output:
+	Static ctor B
+	Static ctor A
+	A.value = 42
+
+==> explain: because B.Print() is a calling to static method of class B ==> static constructor of class B is called first ==> then static method Print() is called ==> A is touch for the first time(mean have no any touch before this moment) so ==> static constructor of A is called ==> after static constructor of A is called ==> the Console.WriteLine statement inside Print() is continue the remain job
+
+***NOTE:
+- for clearly order of static constructor to be load ==> use side effect by explicitly touch the class by order
+ex:
+public class A
+{
+    static A() { Console.WriteLine("Static ctor A"); }
+    public static int value = 42;
+}
+
+public class B
+{
+    static B() { Console.WriteLine("Static ctor B"); }
+    public static void Print()
+    {
+        _ = A.value;	//touch first to call static constructor of class A
+        Console.WriteLine($"A.value = {A.value}");
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        B.Print();
+    }
+}
+
+==> output:
+	Static ctor A
+	Static ctor B
+	A.value = 42
+-------------------------------
+- static constructor is always be called before static member call(not mention to non-static/static fields initializing)
+ex:
+public class X
+{
+    static X()
+    {
+        Console.WriteLine("static constructor called");
+    }
+    public static void f()
+    {
+        Console.WriteLine("static method called");
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        X.f();
+    }
+}
+
+==> output:
+	static constructor called
+	static method called
+------------------------------------
+- like C++, if no any instance constructor is defined ==> compiler will auto generate one default constructor with no parameter.
+But if have at least one instance constructor ==> default instance constructor will not be generated by compiler
+------------------------------------
+anonymous expression to use side effect
+
+_ = new X();	//discard assignment: this will create an object of X() but never use this object because "_" is anonymous. This mean "I don't need this variable, just for touch X"
+------------------------------------
+enum
+
+- to determine(force use) a specific underlying type for an enum ==> use " : desire_type" right after enum name. This forces compiler use desire type for the enum
+ex:
+	public enum MyEnum : byte{}
+	public enum MyEnum : int{}
+***Note that: underlying type for enum is integral types such as: int, byte, sbyte, short, long,...  | But char is not allowed.
+
+- if have bitwise(i.e composite variable) for variable ==> adding attribute "[System.Flags]" (or for short [Flags]) at the head of enum definition for easier for debugging.
+By this way, .ToString() of the variable will be output the name of enum separatly by "," but not integer number.
+Because by default, if not use [Flags] attribute, .ToString() for composited variable(have bitwise) will output integer.
+ex:
++ without decoration with [Flags] attribute:
+	public enum MyEnum{
+		Start = 1,
+		DryRun = 2,
+		Stop
+	}
+	MyEnum combined = (MyEnum.Start | MyEnum.DryRun);
+	Console.WriteLine(combined);	//output is "3"
++ with decoration with [Flags] attribute:
+	[System.Flags]
+	public enum MyEnum{
+		Start = 1,
+		DryRun = 2,
+		Stop
+	}
+	MyEnum combined = (MyEnum.Start | MyEnum.DryRun);
+	Console.WriteLine(combined);	//output is "Start, DryRun"
+
+- in C#, if use combine type purpose - mean: enum definition - the good design is use bit number(flag purpose) with base of 2. although odd number in enum still legal.
+Because of flag is intent for unique(i.e not overlap) bit design. In the other hand, this design for better debugging purpose with .ToString() method
+If not explicitly specify [System.Flags] attribute ==> .ToString() will output in the format of underlying type, not name of enum
+(see detail in example code right above)
+------------------------------------
+const field
+
+- in C#, a constant field is implicitly treated as a static field of class so ==> it will be called by class name. but cannot explicitly mark it with "static" keyword
+in C#, const field belong to class, not to instance!!!
+ex:
+	class Taxi{
+		public const string CarType = "4 wheels";	//OK
+		//public static const string CarType = "4 wheels";	//ERROR, cannot mark a const field as static
+	}
+	Taxi x1 = new();
+	Console.WriteLine(x1.CarType);	//ERROR
+	Console.WriteLine(Taxi.CarType);	//OK
+------------------------------------
+readonly field
+
+- readonly field initialized only 1 time in the whole of program. can not be changed value
++ static readonly field only be initialized at definition time OR in static constructor
++ non-static readonly field only be initialized at definition time OR in instance constructor OR 
+------------------------------------
+using static
+
+- use "using static" for importing "public static members" of a "class/struct/enum/interface" from another assembly(don't care "class/struct/enum/interface" is static or non-static)
+syntax:
+	using static class/struct/enum/interface;
+- **NOTE: if 2 class/struct/enum/interface have the same static member ==> still able to use "using static X" but when calling to its member ==> compile error because this is an ambigious call ==> solution: explicitly call with "class_name.member"
+- ****NOTE: 
+	+ cannot create object from static class. static class is used for utility
+	+ static class can be used in another(very often) assembly
+------------------------------------
+way of pass argument for constructor of class when creating an object
+
+ex:
+	public class Person{
+		public string Name;
+		public string Num;
+		public DateTime DateOfBirth;
+
+		public Person(string name, string num){
+			Name = name;
+			Num = num;
+		}
+	}
+
+	//by call constructor
+	Person gunny1 = new(initialName: "Gunny", homePlanet: "dfasfa"); 	//OK
+	Person gunny2 = new Person(initialName: "Gunny", homePlanet: "dfasfa"); //OK
+	Person gunny3 = new("Gunny", "23");	//OK
+
+	//by set public field/property
+	Person gunny4 = new Person { Name="Gunny", DateOfBirth = DateTime.Now };   //OK
+
+	//by both call constructor and set public field/property
+	Person gunny5 = new Person("Gunny", "24") { DateOfBirth = DateTime.Now };    //OK
+	***NOTE: must use assign "=" here not ":"
+		ex: Person gunny5 = new Person("Gunny", "24") { DateOfBirth: /*here*/ DateTime.Now };    //ERROR
+	
+****NOTE:
+	- "Named argument": explicitly specify parameter(not argument) as argument can be any order
+		ex:
+			public class Person{
+				public Person(string name, int age){	//public instance constructor
+					Console.WriteLine($"{name} is {age}");
+				}
+			}
+			public class Program{
+				static void Main(){
+					Person p1 = new Person("John", 23);	//OK: by order and without explicitly param specify - must be correct order
+					Person p1 = new Person(age: 23, name: "John");	//OK: by param explicitly param specify - not need be correct order
+				}
+			}
+	- "Named argument" is only used for "parameter" in constructor/method, NOT for "object initializer"
+		ex:
+			Person p1 = new Person(initialName: "What", initialAge: 23);	//OK: "initialName" and "initialAge" is parameter
+			Person p2 = new Person(){
+				Name = "Whay",	//"Name" is a field or property NOT parameter
+				Age = 23	//"Age" is a field or property NOT parameter
+			}
+------------------------------------
+tuple
+
+syntax:
+	(data_type1, data_type2, data_typeN) var_name = (data_type1_value, data_type2_value, data_typeN_value);
+
+ex:
+	(string, int) fruit = ("Apple", 5);
+
+- to access item in tuple, use var_name.ItemN with N is the order of Item in tuple
+ex:
+	(string, int) fruit = ("Apple", 5);
+	string a = fruit.Item1;
+	int b = fruit.Item2;
+
+- tuple name inference(only from C# 7.1 up): If tuple is constructed from another object, can use its name to use
+ex:
+	Person bob = new Person{name = "Bob", age: 23);	//name and age is paramter
+	
+	var bobInfo = (bob.Name, bob.Age); /*(1)*/	//Name and Age is field or property NOT parameter
+	//at (1): bobInfo.Item1= bob.Name; bobInfo.Item2= bob.Age;
+	//this means: use "Name" as an alias for "Item1", "Age" is an alias for "Item2"
+	//***NOTE:	"Name" and "Age" here are point to the same address with "Item1" and "Item2". NOT the same address with "bob.Name" and "bob.Age", if "bob.Name"/"bob.Age" change value ==> "bobInfo.Name"/"bobInfo.Age" not change
+ex2:
+	var thing1 = ("Verjf", 4);
+	var thing2 = (bob.Name, bob.Children.Count);    //Name and Count of bob will be used as alias. Item1=Name, Item2=Count
+	
+	//because "Verjf" and 4 are not belong to any object so ==> do not have alias
+	Console.WriteLine($"{thing1.Item1} - {thing1.Item2}");
+
+	//cause Name and Children.Count are belong to "bob" object ==> have alias
+	Console.WriteLine($"{thing2.Name} - {thing2.Count}");   //#1 same #2
+	Console.WriteLine($"{thing2.Item1} - {thing2.Item2}");  //#2 same #1
+	
+------------------------------------
+
+------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+------------------------------------------------------------------------
 top-level statement
 (Only C# 9.0 up)
 
@@ -700,4 +1037,187 @@ ex:
 - private protected (internal AND protected) only for members(field, property, method) of class: only inside assembly and inherited
 - class only allowed by either "internal" or "public", not allowed neither for private nor protected
 ----------------------------
+------------------------------------
+enum
+
+- to determine(force use) a specific underlying type for an enum ==> use " : desire_type" right after enum name. This forces compiler use desire type for the enum
+ex:
+	public enum MyEnum : byte{}
+	public enum MyEnum : int{}
+***Note that: underlying type for enum is integral types such as: int, byte, sbyte, short, long,...  | But char is not allowed.
+
+- if have bitwise(i.e composite variable) for variable ==> adding attribute "[System.Flags]" (or for short [Flags]) at the head of enum definition for easier for debugging.
+By this way, .ToString() of the variable will be output the name of enum separatly by "," but not integer number.
+Because by default, if not use [Flags] attribute, .ToString() for composited variable(have bitwise) will output integer.
+ex:
++ without decoration with [Flags] attribute:
+	public enum MyEnum{
+		Start = 1,
+		DryRun = 2,
+		Stop
+	}
+	MyEnum combined = (MyEnum.Start | MyEnum.DryRun);
+	Console.WriteLine(combined);	//output is "3"
++ with decoration with [Flags] attribute:
+	[System.Flags]
+	public enum MyEnum{
+		Start = 1,
+		DryRun = 2,
+		Stop
+	}
+	MyEnum combined = (MyEnum.Start | MyEnum.DryRun);
+	Console.WriteLine(combined);	//output is "Start, DryRun"
+
+- in C#, if use combine type purpose - mean: enum definition - the good design is use bit number(flag purpose) with base of 2. although odd number in enum still legal.
+Because of flag is intent for unique(i.e not overlap) bit design. In the other hand, this design for better debugging purpose with .ToString() method
+If not explicitly specify [System.Flags] attribute ==> .ToString() will output in the format of underlying type, not name of enum
+(see detail in example code right above)
+------------------------------------
+const field
+
+- in C#, a constant field is implicitly treated as a static field of class so ==> it will be called by class name. but cannot explicitly mark it with "static" keyword
+in C#, const field belong to class, not to instance!!!
+ex:
+	class Taxi{
+		public const string CarType = "4 wheels";	//OK
+		//public static const string CarType = "4 wheels";	//ERROR, cannot mark a const field as static
+	}
+	Taxi x1 = new();
+	Console.WriteLine(x1.CarType);	//ERROR
+	Console.WriteLine(Taxi.CarType);	//OK
+------------------------------------
+readonly field
+
+- readonly field initialized only 1 time in the whole of program. can not be changed value
++ static readonly field only be initialized at definition time OR in static constructor
++ non-static readonly field only be initialized at definition time OR in instance constructor OR 
+------------------------------------
+using static
+
+- use "using static" for importing "public static members" of a "class/struct/enum/interface" from another assembly(don't care "class/struct/enum/interface" is static or non-static)
+syntax:
+	using static class/struct/enum/interface;
+- **NOTE: if 2 class/struct/enum/interface have the same static member ==> still able to use "using static X" but when calling to its member ==> compile error because this is an ambigious call ==> solution: explicitly call with "class_name.member"
+- ****NOTE: 
+	+ cannot create object from static class. static class is used for utility
+	+ static class can be used in another(very often) assembly
+------------------------------------
+way of pass argument for constructor of class when creating an object
+
+ex:
+	public class Person{
+		public string Name;
+		public string Num;
+		public DateTime DateOfBirth;
+
+		public Person(string name, string num){
+			Name = name;
+			Num = num;
+		}
+	}
+
+	//by call constructor
+	Person gunny1 = new(initialName: "Gunny", homePlanet: "dfasfa"); 	//OK
+	Person gunny2 = new Person(initialName: "Gunny", homePlanet: "dfasfa"); //OK
+	Person gunny3 = new("Gunny", "23");	//OK
+
+	//by set public field/property
+	Person gunny4 = new Person { Name="Gunny", DateOfBirth = DateTime.Now };   //OK
+
+	//by both call constructor and set public field/property
+	Person gunny5 = new Person("Gunny", "24") { DateOfBirth = DateTime.Now };    //OK
+	***NOTE: must use assign "=" here not ":"
+		ex: Person gunny5 = new Person("Gunny", "24") { DateOfBirth: /*here*/ DateTime.Now };    //ERROR
+	
+****NOTE:
+	- "Named argument": explicitly specify parameter(not argument) as argument can be any order
+		ex:
+			public class Person{
+				public Person(string name, int age){	//public instance constructor
+					Console.WriteLine($"{name} is {age}");
+				}
+			}
+			public class Program{
+				static void Main(){
+					Person p1 = new Person("John", 23);	//OK: by order and without explicitly param specify - must be correct order
+					Person p1 = new Person(age: 23, name: "John");	//OK: by param explicitly param specify - not need be correct order
+				}
+			}
+	- "Named argument" is only used for "parameter" in constructor/method, NOT for "object initializer"
+		ex:
+			Person p1 = new Person(initialName: "What", initialAge: 23);	//OK: "initialName" and "initialAge" is parameter
+			Person p2 = new Person(){
+				Name = "Whay",	//"Name" is a field or property NOT parameter
+				Age = 23	//"Age" is a field or property NOT parameter
+			}
+------------------------------------
+tuple
+
+syntax:
+	(data_type1, data_type2, data_typeN) var_name = (data_type1_value, data_type2_value, data_typeN_value);
+
+ex:
+	(string, int) fruit = ("Apple", 5);
+
+- to access item in tuple, use var_name.ItemN with N is the order of Item in tuple
+ex:
+	(string, int) fruit = ("Apple", 5);
+	string a = fruit.Item1;
+	int b = fruit.Item2;
+
+- tuple name inference(only from C# 7.1 up): If tuple is constructed from another object, can use its name to use
+ex:
+	Person bob = new Person{name = "Bob", age: 23);	//name and age is paramter
+	
+	var bobInfo = (bob.Name, bob.Age); /*(1)*/	//Name and Age is field or property NOT parameter
+	//at (1): bobInfo.Item1= bob.Name; bobInfo.Item2= bob.Age;
+	//this means: use "Name" as an alias for "Item1", "Age" is an alias for "Item2"
+	//***NOTE:	"Name" and "Age" here are point to the same address with "Item1" and "Item2". NOT the same address with "bob.Name" and "bob.Age", if "bob.Name"/"bob.Age" change value ==> "bobInfo.Name"/"bobInfo.Age" not change
+ex2:
+	var thing1 = ("Verjf", 4);
+	var thing2 = (bob.Name, bob.Children.Count);    //Name and Count of bob will be used as alias. Item1=Name, Item2=Count
+	
+	//because "Verjf" and 4 are not belong to any object so ==> do not have alias
+	Console.WriteLine($"{thing1.Item1} - {thing1.Item2}");
+
+	//cause Name and Children.Count are belong to "bob" object ==> have alias
+	Console.WriteLine($"{thing2.Name} - {thing2.Count}");   //#1 same #2
+	Console.WriteLine($"{thing2.Item1} - {thing2.Item2}");  //#2 same #1
+
+
+
+Deconstructing types
+
+- if class have method with name "Deconstruct" ==> compiler will know and treate this method as deconstructing the object
+- this method use for tuple extracting
+- this method just for shorthand for compiler. It equals to explicitly call 
+- requirement:
+	+ signature:	public void Deconstruct(out data_type1 param_name1, out data_type2 param_name2, ....){}
+	+ must be public method
+	+ parameters must be "out" type
+	+ have at least 1 param BUT should use from 2 params up BECAUSE if only 1 param ==> no meaningful and may be compile raise an error!!! although it is legal
+ex:
+	public class Point{
+		public int x;	//field
+		public int y;	//field
+		
+		//special method for compile know
+		public void Deconstruct(out int a, out int b){
+			a = x;
+			b = y;
+		}
+	}
+	
+	//usage
+	Point p1 = new Point(8, 3);	//assume already define this constructor
+	(int xPoint, int yPoint) = p1;	//now: xPoint = 8, yPoint = 3
+	//OR this is the same: var (xPoint, yPoint) = p1;	//now: xPoint = 8, yPoint = 3
+
+	//This infer Deconstruct method is the same with the calling:
+	Point p1 = new Point(8, 3);	//assume already define this constructor
+	int x1;
+	int y1;
+	bob.Deconstruct(out x1, out y1);	//explicit call
+------------------------------------
+
 ------------------------------------------------------------------------
