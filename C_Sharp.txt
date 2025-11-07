@@ -1219,5 +1219,47 @@ ex:
 	int y1;
 	bob.Deconstruct(out x1, out y1);	//explicit call
 ------------------------------------
+none, out, ref parameter
+
+- normal value passing: void Func(int x);	//local Func() scope
+- out:	cannot read value, only write to but first needed to assign
+ex:
+	
+	void Func1(out int num){
+		int k = num;	//ERROR: must assign first
+	}
+	void Func2(out int num){
+		num = 0;		//Yes, must assign before use
+		int k = num;	//OK
+	}
+	void Main(){
+		int x = 9;
+		Func2(out x);	//OK
+	}
+
+- ref:	both in an out value - like "&" in C++. Not need to assign first
+ex:
+	void Func(ref int num){
+		int x = num;	//OK: can read value
+		num = 9;		//OK: can write value
+	}
+	void Main(){
+		int x;
+		Func(ref x);	//OK
+	}
+**NOTE: with "out" and "ref" params, must put keyword "out"/"ref" when passing value
+
+- simplied out paramter: from C# 7.0 can declare new local variable inside function call. ***NOTE: never use this way
+ex:
+	void Func(out int f){	//declare out param as normal
+		f = 0;
+		f++;
+	}
+	void Main(){
+		//k variable have not defined yet
+		Func(out in k);	//call and define k variable. after this call ==> k exist
+		Console.WriteLine(k);	//can use k
+	}
+------------------------------------
 
 ------------------------------------------------------------------------
